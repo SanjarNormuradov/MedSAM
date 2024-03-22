@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import os
 
 join = os.path.join
-from tqdm import tqdm,trange
+from tqdm import tqdm, trange
 from skimage import transform
 import torch
 import torch.nn as nn
@@ -37,7 +37,7 @@ os.environ["MKL_NUM_THREADS"] = "6"  # export MKL_NUM_THREADS=6
 os.environ["VECLIB_MAXIMUM_THREADS"] = "4"  # export VECLIB_MAXIMUM_THREADS=4
 os.environ["NUMEXPR_NUM_THREADS"] = "6"  # export NUMEXPR_NUM_THREADS=6
 
-
+# %% box/mask visualization
 def show_mask(mask, ax, random_color=False):
     if random_color:
         color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
@@ -55,6 +55,7 @@ def show_box(box, ax):
         plt.Rectangle((x0, y0), w, h, edgecolor="blue", facecolor=(0, 0, 0, 0), lw=2)
     )
 
+# %% h5 Dataset Class
 class h5Dataset(Dataset):
     def __init__(self, h5_file_path, transform=None, bbox_shift=20):
         self.h5_files = sorted(
@@ -74,7 +75,7 @@ class h5Dataset(Dataset):
     def __len__(self):
         return len(self.dataset_dicts)
 
-    def processdata(self,h5_files, transform=None, bbox_shift=20):
+    def processdata(self, h5_files, transform=None, bbox_shift=20):
         dataset_dicts = []
         
         for file in h5_files:
@@ -82,13 +83,13 @@ class h5Dataset(Dataset):
             imgs= h5f["imgs"]
             gts = h5f["gts"]
             print(f"number of images: {len(imgs)} in {file}")
-            #dataset_dicts = []
+            # dataset_dicts = []
             for idx in range(len(imgs)):
                 # load npy image (1024, 1024, 3), [0,1]
-                #img_name = os.path.basename(self.imgs[index])
-                #img_1024 = np.load(
+                # img_name = os.path.basename(self.imgs[index])
+                # img_1024 = np.load(
                 #    join(self.img_path, img_name), "r", allow_pickle=True
-                #)  # (1024, 1024, 3)
+                # )  # (1024, 1024, 3)
                 img_1024 = imgs[idx]
                 # convert the shape to (3, H, W)
                 img_1024 = np.transpose(img_1024, (2, 0, 1))
@@ -99,7 +100,7 @@ class h5Dataset(Dataset):
                 #     self.gt_path_files[index], "r", allow_pickle=True
                 # )  # multiple labels [0, 1,4,5...], (256,256)
                 gt = gts[idx]
-                #TODO: include check that gts matches image
+                # TODO: include check that gts matches image
                 # assert img_name == os.path.basename(self.gt_path_files[index]), (
                 #     "img gt name error" + self.gt_path_files[index] + self.npy_files[index]
                 # )
@@ -130,7 +131,7 @@ class h5Dataset(Dataset):
     def __getitem__(self, index):
         return self.dataset_dicts[index]
 
-
+# %% Npy Dataset Class
 class NpyDataset(Dataset):
     def __init__(self, data_root, bbox_shift=20):
         self.data_root = data_root
@@ -188,7 +189,6 @@ class NpyDataset(Dataset):
             torch.tensor(bboxes).float(),
             img_name,
         )
-
 
 # %% sanity test of npy dataset class
 # trnpy_dataset = NpyDataset("dataset/StowSam/input/train")
@@ -265,36 +265,90 @@ parser.add_argument(
     default="dataset/StowSam/input/train/",
     help="path to training h5 files; two subfolders: gts and imgs",
 )
-parser.add_argument("-task_name", type=str, default="StowSAM-ViT-B")
-parser.add_argument("-model_type", type=str, default="vit_b")
 parser.add_argument(
-    "-checkpoint", type=str, default="work_dir/SAM/sam_vit_b_01ec64.pth"
+    "-task_name",
+    type=str,
+    default="StowSAM-ViT-B"
 )
-# parser.add_argument('-device', type=str, default='cuda:0')
 parser.add_argument(
-    "--load_pretrain", type=bool, default=True, help="use wandb to monitor training"
+    "-model_type",
+    type=str,
+    default="vit_b"
 )
-parser.add_argument("-pretrain_model_path", type=str, default="")
-parser.add_argument("-work_dir", type=str, default="./work_dir")
-# train
-parser.add_argument("-num_epochs", type=int, default=10)
-parser.add_argument("-batch_size", type=int, default=2)
-parser.add_argument("-num_workers", type=int, default=0)
+parser.add_argument(
+    "-checkpoint",
+    type=str,
+    default="work_dir/SAM/sam_vit_b_01ec64.pth"
+)
+parser.add_argument(
+    "--load_pretrain",
+    type=bool,
+    default=True,
+    help="use wandb to monitor training"
+)
+parser.add_argument(
+    "-pretrain_model_path",
+    type=str,
+    default=""
+)
+parser.add_argument(
+    "-work_dir",
+    type=str,
+    default="./work_dir"
+)
+# Train
+parser.add_argument(
+    "-num_epochs",
+    type=int,
+    default=10
+)
+parser.add_argument(
+    "-batch_size",
+    type=int,
+    default=2
+)
+parser.add_argument(
+    "-num_workers",
+    type=int,
+    default=0
+)
 # Optimizer parameters
 parser.add_argument(
-    "-weight_decay", type=float, default=0.01, help="weight decay (default: 0.01)"
+    "-weight_decay",
+    type=float,
+    default=0.01,
+    help="weight decay (default: 0.01)"
 )
 parser.add_argument(
-    "-lr", type=float, default=0.0001, metavar="LR", help="learning rate (absolute lr)"
+    "-lr",
+    type=float,
+    default=0.0001,
+    metavar="LR",
+    help="learning rate (absolute lr)"
 )
 parser.add_argument(
-    "-use_wandb", type=bool, default=False, help="use wandb to monitor training"
+    "-use_wandb",
+    type=bool,
+    default=False,
+    help="use wandb to monitor training"
 )
-parser.add_argument("-use_amp", action="store_true", default=False, help="use amp")
 parser.add_argument(
-    "--resume", type=str, default="", help="Resuming training from checkpoint"
+    "-use_amp",
+    action="store_true",
+    default=False,
+    help="use amp"
 )
-parser.add_argument("--device", type=str, default="cuda:0")
+parser.add_argument(
+    "--resume",
+    type=str,
+    default="",
+    help="Resuming training from checkpoint"
+)
+parser.add_argument(
+    "--device",
+    type=str,
+    default="cuda:0"
+)
 args = parser.parse_args()
 
 if args.use_wandb:
@@ -337,7 +391,7 @@ class StowSAM(nn.Module):
             param.requires_grad = False
 
     def forward(self, image, box):
-        #image_embedding = self.image_encoder(image)  # (B, 256, 64, 64)
+        # image_embedding = self.image_encoder(image)  # (B, 256, 64, 64)
         # do not compute gradients for prompt encoder
         with torch.no_grad():
             image_embedding = self.image_encoder(image)  # (B, 256, 64, 64) Optional no gradient for image encoder
@@ -365,7 +419,7 @@ class StowSAM(nn.Module):
         )
         return ori_res_masks
 
-
+# %% main()
 def main():
     os.makedirs(model_save_path, exist_ok=True)
     shutil.copyfile(
@@ -402,6 +456,7 @@ def main():
     seg_loss = monai.losses.DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
     # cross entropy loss
     ce_loss = nn.BCEWithLogitsLoss(reduction="mean")
+
     # %% train
     num_epochs = args.num_epochs
     iter_num = 0
